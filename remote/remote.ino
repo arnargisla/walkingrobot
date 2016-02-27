@@ -1,10 +1,15 @@
-// Adafruit Motor shield library
-// copyright Adafruit Industries LLC, 2009
-// this code is public domain, enjoy!
+/*
+ * IRremote: IRrecvDemo - demonstrates receiving IR codes with IRrecv
+ * An IR detector/demodulator must be connected to the input RECV_PIN.
+ * Version 0.1 July, 2009
+ * Copyright 2009 Ken Shirriff
+ * http://arcfn.com
+ */
 
-#include <AFMotor.h>
+
 #include <IRremote.h>
 
+ 
 #define key_poweron 0x00FFA25D
 #define key_mode    0x0000629D
 #define key_mute    0xFFFFE21D
@@ -27,71 +32,26 @@
 #define key_8       0x00004AB5
 #define key_9       0x000052AD
 
-AF_DCMotor motor(1);
-
 const int RECV_PIN = 31;
 IRrecv irrecv(RECV_PIN);
 decode_results results;
 
-
-int inByte = 0;
-
-void setup() {
-  Serial.begin(9600);           // set up Serial library at 9600 bps
+void setup()
+{
+  Serial.begin(9600);
   Serial.println("Hello!");
-
-
   irrecv.enableIRIn(); // Start the receiver
-  // turn on motor
-  motor.setSpeed(255);
- 
-  motor.run(RELEASE);
 }
 
-boolean forward = true;
-boolean ison = false;
 void loop() {
-  //uint8_t i;
-  
   if (irrecv.decode(&results)) {
-    String out = "";
-    int keypressed = results.value;
     receivedValue(results.value);
-    if(keypressed == key_play){
-      if(ison){
-        out = "motor stop";
-        ison = !ison;
-        motor.run(RELEASE);
-      }else{
-        ison = !ison;
-        if(forward){
-          out = "motor forward";
-          motor.run(FORWARD);
-        }else{
-          out = "motor backward";
-          motor.run(BACKWARD);
-        }
-      }
-    }else if(keypressed == key_forward){
-      if(ison){
-        out = "motor forward";
-        forward = true;
-        motor.run(FORWARD);
-      }
-    }else if(keypressed == key_back){
-      if(ison){
-        out = "motor backward";
-        forward = false;
-        motor.run(BACKWARD);
-      }
-    }
     irrecv.resume(); // Receive the next value
   }
   delay(100);
 }
 
-
-String receivedValue(int received){
+void receivedValue(int received){
   String out = "not reacognized";
   switch(received) {
     case key_poweron:
@@ -158,7 +118,7 @@ String receivedValue(int received){
       out = "KEY9";
       break;
     default:
-    break;
+      break;
   }
   //Serial.print(received, HEX);
   //Serial.print(" ");
