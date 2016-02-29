@@ -1,7 +1,3 @@
-// Adafruit Motor shield library
-// copyright Adafruit Industries LLC, 2009
-// this code is public domain, enjoy!
-
 #include <AFMotor.h>
 #include <IRremote.h>
 #include "DCMotor.h"
@@ -29,12 +25,15 @@
 #define key_9       0x000052AD
 
 AF_DCMotor afmotor1(1);
+AF_DCMotor afmotor2(2);
+AF_DCMotor afmotor3(3);
 
 const int RECV_PIN = 31;
 IRrecv irrecv(RECV_PIN);
 decode_results results;
 
-DCMotor motor1;
+DCMotor motor1, motor2, motor3;
+DCMotor* currentlySelectedMotor;
 
 void setup() {
   Serial.begin(9600);           // set up Serial library at 9600 bps
@@ -42,40 +41,73 @@ void setup() {
   irrecv.enableIRIn();          // Start the receiver
   
   motor1 = {"Motor 1", &afmotor1, 150, 16, true, false};
+  motor2 = {"Motor 2", &afmotor2, 150, 16, true, false};
+  motor3 = {"Motor 3", &afmotor3, 150, 16, true, false};
+  currentlySelectedMotor = &motor1;
   
-  // turn on motor
+  // turn on motors
   motor1.motor->run(RELEASE);
-  motor1.motor->setSpeed(200);
+  motor1.motor->setSpeed(motor1.motorSpeed);
+  motor2.motor->run(RELEASE);
+  motor2.motor->setSpeed(motor2.motorSpeed);
+  motor3.motor->run(RELEASE);
+  motor3.motor->setSpeed(motor3.motorSpeed);
 }
 
-
-boolean motor1forward = true;
-boolean motor1ison = false;
-int motor1speed = 200;
-int motor1dspeed = 16;
-boolean stateChanged = false;
 
 void loop() {
   if (irrecv.decode(&results)) {
     unsigned long keypressed = results.value;
-    receivedValue(keypressed);
+    printReceivedValue(keypressed);
     
-    // reset stateChange
-    stateChanged = true;
+    if(keypressed == key_poweron){
+      stopAllMotors(); 
+    }
     
-    //update the motor
-    updateMotorState(motor1, keypressed);
-    updateMotor(motor1);
-    printMotorState(motor1);
+    determineCurrentlySelectedMotor(keypressed);
+    updateCurrentlySelectedMotorState(keypressed);
+    updateCurrentlySelectedMotor();
+    printCurrentlySelectedMotorState();
     
     irrecv.resume(); // Receive the next value
   }
   delay(100);
 }
 
+void stopAllMotors(){
+  deactivateAllMotors();
+  updateAllMotors();
+  Serial.println("Stopped all motors");
+}
+
+void deactivateAllMotors(){
+  motor1.isActive = false;
+  motor2.isActive = false;
+  motor3.isActive = false;
+}
+
+void updateAllMotors(){
+  updateMotor(motor1);
+  updateMotor(motor2);
+  updateMotor(motor3);
+}
+
+void determineCurrentlySelectedMotor(int keypressed){
+  if(keypressed == key_1){
+    currentlySelectedMotor = &motor1;
+  }else if(keypressed == key_2){
+    currentlySelectedMotor = &motor2;
+  }else if(keypressed == key_3){
+    currentlySelectedMotor = &motor3;
+  } 
+}
+
+void printCurrentlySelectedMotorState(){
+  printMotorState(*currentlySelectedMotor);
+}
 
 void printMotorState(DCMotor dcmotor){
-  Serial.print("Name: " + dcmotor.name);
+  Serial.print("Current Motor: Name: " + dcmotor.name);
   Serial.print(" Speed: ");
   Serial.print(dcmotor.motorSpeed);
   Serial.print(" isGoingForward: ");
@@ -93,22 +125,26 @@ void printMotorState(DCMotor dcmotor){
   Serial.println("");
 }
 
+void updateCurrentlySelectedMotor(){
+  updateMotor(*currentlySelectedMotor);
+}
+  
 void updateMotor(DCMotor &dcmotor){
-  if(stateChanged){
-    stateChanged = false;
-    if(dcmotor.isActive){
-      if(dcmotor.isGoingForward){
-        dcmotor.motor->run(FORWARD);
-      }else{
-        dcmotor.motor->run(BACKWARD);
-      }
+  if(dcmotor.isActive){
+    if(dcmotor.isGoingForward){
+      dcmotor.motor->run(FORWARD);
     }else{
-      dcmotor.motor->run(RELEASE);
+      dcmotor.motor->run(BACKWARD);
     }
-    dcmotor.motor->setSpeed(dcmotor.motorSpeed);
+  }else{
+    dcmotor.motor->run(RELEASE);
   }
+  dcmotor.motor->setSpeed(dcmotor.motorSpeed);
 }
 
+void updateCurrentlySelectedMotorState(int keypressed){
+    updateMotorState(*currentlySelectedMotor, keypressed);
+}
 
 void updateMotorState(DCMotor &dcmotor, int keypressed){
   if(keypressed == key_play){
@@ -149,7 +185,7 @@ void updateMotorState(DCMotor &dcmotor, int keypressed){
 }
 
 
-void receivedValue(int received){
+void printReceivedValue(int received){
   String out = "not reacognized";
   switch(received) {
     case key_poweron:
