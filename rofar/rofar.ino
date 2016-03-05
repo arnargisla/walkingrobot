@@ -34,16 +34,16 @@ void setup(){
   //start serial connection
   Serial.begin(9600);
   //configure pin2 as an input and enable the internal pull-up resistor
-  pinMode(switchPin, INPUT_PULLUP);
+  pinMode(switchPin, INPUT);
   pinMode(ledPin, OUTPUT); 
   
   //attachInterrupt(5,anInterruptFunction,RISING);
-  attachInterrupt(5,anInterruptFunction,RISING);
+  attachInterrupt(5,verticalLegInterrupt,RISING);
   
 }
 
 
-void anInterruptFunction() {
+void verticalLegInterrupt() {
   if(millis() - lastDebounceTime > debounceDelay){
     lastDebounceTime = millis();
     switch1 = true;
