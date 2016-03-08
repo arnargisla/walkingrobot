@@ -1,0 +1,68 @@
+boolean frontLegSwitchPressed;
+boolean backLegSwitchPressed;
+boolean weightSwitchPressed;
+
+frontLegSwitchInterrupt();
+backLegSwitchInterrupt();
+weightSwitchInterrput();
+
+setup();
+loop();
+
+void transitionFromState0To1(){
+  // set back leg direction forward
+  // activate back leg
+  while(!frontLegSwitchPressed){}
+  // stop back leg
+}
+
+void transitionFromState1To2(){
+  // set front leg direction up
+  // activate front leg
+  while(!backLegSwitchPressed){}
+  // stop back leg
+}
+
+void transitionFromState2To3(){
+  // set back leg direction backward
+  // activate back leg
+  // set weight direction backard
+  // activate weight
+  while(!backLegSwitchPressed || !weightSwitchPressed){
+    if(backLegSwitchPressed){
+      // stop back leg 
+    }
+    if(weightSwitchPressed){
+      // stop weight
+    }
+  }
+  // stop back leg 
+  // stop weight
+}
+
+void transitionFromState3To4(){
+  // set weight direction front
+  // activate weight
+  while(!weightSwitchPressed){}
+  // stop weight
+}
+
+void transitionFromState4To0(){
+  // set front leg direction down
+  // activate front leg
+  while(!backLegSwitchPressed){}
+  // stop back leg
+}
+
+void resetToState0(){
+  
+}
+
+
+
+
+
+
+
+
+

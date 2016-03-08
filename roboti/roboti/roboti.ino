@@ -1,48 +1,48 @@
 #include <AFMotor.h>
 #include <IRremote.h>
 #include "DCMotor.h"
+#include "RemoteButtonDefinitions.h"
 
-#define key_poweron 0x00FFA25D
-#define key_mode    0x0000629D
-#define key_mute    0xFFFFE21D
-#define key_play    0x000022DD
-#define key_back    0x000002FD
-#define key_forward 0xFFFFC23D
-#define key_eq      0xFFFFE01F
-#define key_minus   0xFFFFA857
-#define key_plus    0xFFFF906F
-#define key_0       0x00006897
-#define key_arrows  0xFFFF9867
-#define key_usd     0xFFFFB04F
-#define key_1       0x000030CF
-#define key_2       0x000018E7
-#define key_3       0x00007A85
-#define key_4       0x000010EF
-#define key_5       0x000038C7
-#define key_6       0x00005AA5
-#define key_7       0x000042BD
-#define key_8       0x00004AB5
-#define key_9       0x000052AD
+#define ROBOT_STATE_0 0
+#define ROBOT_STATE_1 1
+#define ROBOT_STATE_2 2
+#define ROBOT_STATE_3 3
+#define ROBOT_STATE_4 4
+#define ROBOT_STATE_RESET 5
+#define ROBOT_STATE_PAUSED 6
 
 AF_DCMotor afmotor1(1);
 AF_DCMotor afmotor2(2);
 AF_DCMotor afmotor3(3);
 
-const int RECV_PIN = 31;
-IRrecv irrecv(RECV_PIN);
-decode_results results;
+const int irRemotePin = 26;
+const int frontLegSwitchPin = 18;
+const int backLegSwitchPin = 19;
+const int weightLegSwitchPin = 20;
+
+int currentRobotState = ROBOT_STATE_0;
+
+// Pæling að upphasstilla þetta einhvernveginn??
+boolean frontLegSwitchPressed = false;
+boolean backLegSwitchPressed = false;
+boolean weightSwitchPressed = false;
+
+IRrecv irRemote(irRemotePin);
+decode_results irRemoteResults;
+unsigned long irRemoteKeyPressed;
 
 DCMotor motor1, motor2, motor3;
 DCMotor* currentlySelectedMotor;
 
 void setup() {
-  Serial.begin(9600);           // set up Serial library at 9600 bps
-  Serial.println("Hello!");
-  irrecv.enableIRIn();          // Start the receiver
+  Serial.begin(9600);
+  Serial.println("Hello!\n");
   
-  motor1 = {"Motor 1", &afmotor1, 150, 16, true, false};
-  motor2 = {"Motor 2", &afmotor2, 150, 16, true, false};
-  motor3 = {"Motor 3", &afmotor3, 150, 16, true, false};
+  irRemote.enableIRIn();
+  
+  motor1 = {"Motor 1", &afmotor1, 255, 16, true, false};
+  motor2 = {"Motor 2", &afmotor2, 255, 16, true, false};
+  motor3 = {"Motor 3", &afmotor3, 255, 16, true, false};
   currentlySelectedMotor = &motor1;
   
   // turn on motors
@@ -52,26 +52,218 @@ void setup() {
   motor2.motor->setSpeed(motor2.motorSpeed);
   motor3.motor->run(RELEASE);
   motor3.motor->setSpeed(motor3.motorSpeed);
+  
+  pinMode(frontLegSwitchPin, INPUT);
+  pinMode(backLegSwitchPin, INPUT);
+  pinMode(weightLegSwitchPin, INPUT);
+  attachInterrupt(digitalPinToInterrupt(frontLegSwitchPin), &frontLegSwitchInterrupt, RISING);
+  attachInterrupt(digitalPinToInterrupt(backLegSwitchPin), &backLegSwitchInterrupt, RISING);
+  attachInterrupt(digitalPinToInterrupt(weightLegSwitchPin), &weightSwitchInterrupt, RISING);
+
+  delay(1000);
+  resetSwitchStates();
 }
 
-
 void loop() {
-  if (irrecv.decode(&results)) {
-    unsigned long keypressed = results.value;
-    printReceivedValue(keypressed);
+  handleRemote();
+  updateRobotState();
+}
+
+void handleRemote(){
+  if (irRemote.decode(&irRemoteResults)) {
+    irRemoteKeyPressed = irRemoteResults.value;
+    printReceivedValue(irRemoteKeyPressed);
     
-    if(keypressed == key_poweron){
+    if(irRemoteKeyPressed == key_poweron){
       stopAllMotors(); 
+    } else if (irRemoteKeyPressed == key_arrows){
+      printSwitchStates();
+    } else if (irRemoteKeyPressed == key_usd){
+      resetSwitchStates();
+    } else if (irRemoteKeyPressed == key_mode){
+      printCurrentRobotState();
     }
-    
-    determineCurrentlySelectedMotor(keypressed);
-    updateCurrentlySelectedMotorState(keypressed);
+        
+    determineCurrentlySelectedMotor(irRemoteKeyPressed);
+    updateCurrentlySelectedMotorState(irRemoteKeyPressed);
     updateCurrentlySelectedMotor();
     printCurrentlySelectedMotorState();
     
-    irrecv.resume(); // Receive the next value
+    irRemote.resume(); // Receive the next value
   }
-  delay(100);
+}
+
+void updateRobotState(){
+  int nextRobotState = ROBOT_STATE_RESET;
+  switch(currentRobotState){
+    case ROBOT_STATE_PAUSED:
+      nextRobotState = stepRobotStatePaused();
+      break;
+    case ROBOT_STATE_RESET:
+      nextRobotState = stepRobotStateReset();
+      break;
+    case ROBOT_STATE_0:
+      nextRobotState = stepRobotState0();
+      break;
+    case ROBOT_STATE_1:
+      nextRobotState = stepRobotState1();
+      break;
+    case ROBOT_STATE_2:
+      nextRobotState = stepRobotState2();
+      break;
+    case ROBOT_STATE_3:
+      nextRobotState = stepRobotState3();
+      break;
+    case ROBOT_STATE_4:
+      nextRobotState = stepRobotState4();
+      break;
+    default:
+      Serial.println(" Error in state machine! ");
+      break;
+  }
+  
+  currentRobotState = nextRobotState;
+}
+
+int stepRobotStatePaused(){
+  return ROBOT_STATE_PAUSED;
+}
+
+int stepRobotStateReset(){
+  // PRE: 
+  //   unknown
+  // POST:
+  //   front leg: down
+  //   back leg: back
+  //   weight front
+  // next state -> 1
+  return ROBOT_STATE_PAUSED;
+}
+
+int stepRobotState0(){
+  // PRE: 
+  //   front leg: up
+  //   back leg: back
+  //   weight front
+  // POST:
+  //   front leg: down
+  //   back leg: back
+  //   weight front
+  // next state -> 1
+  return ROBOT_STATE_PAUSED;
+}
+
+int stepRobotState1(){
+  // PRE: 
+  //   front leg: down
+  //   back leg: back
+  //   weight front
+  // POST:
+  //   front leg: down
+  //   back leg: front
+  //   weight front
+  // next state -> 2
+  return ROBOT_STATE_PAUSED;
+}
+
+int stepRobotState2(){
+  // PRE: 
+  //   front leg: down
+  //   back leg: front
+  //   weight front
+  // POST:
+  //   front leg: up
+  //   back leg: front
+  //   weight front
+  // next state -> 3
+  return ROBOT_STATE_PAUSED;
+}
+
+int stepRobotState3(){
+  // PRE: 
+  //   front leg: up
+  //   back leg: front
+  //   weight front
+  // POST:
+  //   front leg: up
+  //   back leg: back
+  //   weight back
+  // next state -> 4
+  return ROBOT_STATE_PAUSED;
+}
+
+int stepRobotState4(){
+  // PRE: 
+  //   front leg: up
+  //   back leg: back
+  //   weight back
+  // POST:
+  //   front leg: up
+  //   back leg: back
+  //   weight front
+  // next state -> 4
+  
+  // front leg: up
+  // back leg: back
+  // weight front
+  // next state -> 0
+  return ROBOT_STATE_PAUSED;
+}
+
+void resetSwitchStates(){
+  Serial.println("RESET switch states.");
+  frontLegSwitchPressed = false;
+  backLegSwitchPressed = false;
+  weightSwitchPressed = false;
+}
+
+void printSwitchStates(){
+  int frontLegSwitchPinReading = digitalRead(frontLegSwitchPin);
+  int backLegSwitchPinReading = digitalRead(backLegSwitchPin);
+  int weightLegSwitchPinnReading = digitalRead(weightLegSwitchPin);
+  Serial.println("Switch states:");
+  Serial.print("  frontLegSwitchPin is: ");
+  if(frontLegSwitchPinReading==1){
+    Serial.print("open, ");
+  } else {
+    Serial.print("closed, ");
+  }
+  Serial.print("frontLegSwitchPressed: ");
+  Serial.print(frontLegSwitchPressed);
+  Serial.println(".");
+  Serial.print("  backLegSwitchPin is: ");
+  if(backLegSwitchPinReading==1){
+    Serial.print("open, ");
+  } else {
+    Serial.print("closed, ");
+  }
+  Serial.print("frontLegSwitchPressed: ");
+  Serial.print(backLegSwitchPressed);
+  Serial.println(".");
+  Serial.print("  weightLegSwitchPin is: ");
+  if(weightLegSwitchPinnReading==1){
+    Serial.print("open, ");
+  } else {
+    Serial.print("closed, ");
+  }
+  Serial.print("frontLegSwitchPressed: ");
+  Serial.print(weightSwitchPressed);
+  Serial.println(".");
+}
+
+void frontLegSwitchInterrupt(){
+  frontLegSwitchPressed = true;
+  Serial.println("|_frontleg switch interrupt");
+}
+
+void backLegSwitchInterrupt(){
+  backLegSwitchPressed = true;
+  Serial.println("|_backleg switch interrupt");
+}
+
+void weightSwitchInterrupt(){
+  weightSwitchPressed = true;
+  Serial.println("|_weight switch interrupt");
 }
 
 void stopAllMotors(){
@@ -92,14 +284,46 @@ void updateAllMotors(){
   updateMotor(motor3);
 }
 
-void determineCurrentlySelectedMotor(int keypressed){
-  if(keypressed == key_1){
+void determineCurrentlySelectedMotor(unsigned long irRemoteKeyPressed){
+  if(irRemoteKeyPressed == key_1){
     currentlySelectedMotor = &motor1;
-  }else if(keypressed == key_2){
+  }else if(irRemoteKeyPressed == key_2){
     currentlySelectedMotor = &motor2;
-  }else if(keypressed == key_3){
+  }else if(irRemoteKeyPressed == key_3){
     currentlySelectedMotor = &motor3;
-  } 
+  }
+}
+
+void printCurrentRobotState(){
+  Serial.print("Current robot state: ");
+  String state;
+  switch(currentRobotState){
+    case ROBOT_STATE_RESET:
+      state = " RESET state.";
+      break;
+    case ROBOT_STATE_PAUSED:
+      state = " PAUSED state.";
+      break;
+    case ROBOT_STATE_0:
+      state = " 0 state.";
+      break;
+    case ROBOT_STATE_1:
+      state = " 1 state.";
+      break;
+    case ROBOT_STATE_2:
+      state = " 2 state.";
+      break;
+    case ROBOT_STATE_3:
+      state = " 3 state.";
+      break;
+    case ROBOT_STATE_4:
+      state = " 4 state.";
+      break;
+    default:
+      state = " undefined state.";
+      break;
+  }
+  Serial.println(state);
 }
 
 void printCurrentlySelectedMotorState(){
@@ -142,12 +366,12 @@ void updateMotor(DCMotor &dcmotor){
   dcmotor.motor->setSpeed(dcmotor.motorSpeed);
 }
 
-void updateCurrentlySelectedMotorState(int keypressed){
-    updateMotorState(*currentlySelectedMotor, keypressed);
+void updateCurrentlySelectedMotorState(unsigned long irRemoteKeyPressed){
+    updateMotorState(*currentlySelectedMotor, irRemoteKeyPressed);
 }
 
-void updateMotorState(DCMotor &dcmotor, int keypressed){
-  if(keypressed == key_play){
+void updateMotorState(DCMotor &dcmotor, unsigned long irRemoteKeyPressed){
+  if(irRemoteKeyPressed == key_play){
     if(dcmotor.isActive){
       Serial.println("Stopping motor: \"" + dcmotor.name + "\".");
       // Stop motor
@@ -157,15 +381,15 @@ void updateMotorState(DCMotor &dcmotor, int keypressed){
       // Start motor
       dcmotor.isActive = !dcmotor.isActive;
     }
-  }else if(keypressed == key_forward){
+  }else if(irRemoteKeyPressed == key_forward){
     // Set direction forwards
     Serial.println("Set motor: \"" + dcmotor.name + "\" direction FORWARD");
     dcmotor.isGoingForward = true;
-  }else if(keypressed == key_back){
+  }else if(irRemoteKeyPressed == key_back){
     // Set direction backwards
     Serial.println("Set motor: \"" + dcmotor.name + "\" direction BACKWARD");
     dcmotor.isGoingForward = false;
-  }else if(keypressed == key_plus){
+  }else if(irRemoteKeyPressed == key_plus){
     // Increase speed
     dcmotor.motorSpeed = dcmotor.motorSpeed + dcmotor.dspeed;
     if(dcmotor.motorSpeed > 255){
@@ -173,7 +397,7 @@ void updateMotorState(DCMotor &dcmotor, int keypressed){
     }
     Serial.print("Increase motor: \"" + dcmotor.name + "\" speed. Motor speed: ");
     Serial.println(dcmotor.motorSpeed);
-  }else if(keypressed == key_minus){
+  }else if(irRemoteKeyPressed == key_minus){
     // Decrease speed
     dcmotor.motorSpeed = dcmotor.motorSpeed - dcmotor.dspeed;
     if(dcmotor.motorSpeed < 0){
@@ -185,7 +409,7 @@ void updateMotorState(DCMotor &dcmotor, int keypressed){
 }
 
 
-void printReceivedValue(int received){
+void printReceivedValue(unsigned long received){
   String out = "not reacognized";
   switch(received) {
     case key_poweron:
@@ -254,9 +478,5 @@ void printReceivedValue(int received){
     default:
       break;
   }
-  //Serial.print(received, HEX);
-  //Serial.print(" ");
-  //Serial.print(received);
-  //Serial.print(" ");
   Serial.println("Key pressed: " + out);
 }
