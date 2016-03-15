@@ -18,9 +18,18 @@ AF_DCMotor afmotor3(3);
 const int irRemotePin = 26;
 const int frontLegSwitchPin = 18;
 const int backLegSwitchPin = 19;
-const int weightLegSwitchPin = 20;
+const int weightSwitchPin = 20;
+const int frontLegBottomPin = 31;
+const int backLegFrontSwitchPin = 33;
+const int weightFrontSwitchPin = 35;
+
+const boolean stateDelayOn = true;
+const int stateDelayDurationMs = 500;
+const int stateReportingOn = true;
+
 
 int currentRobotState = ROBOT_STATE_0;
+int lastRobotState = ROBOT_STATE_0;
 
 // Pæling að upphasstilla þetta einhvernveginn??
 boolean frontLegSwitchPressed = false;
@@ -55,10 +64,10 @@ void setup() {
   
   pinMode(frontLegSwitchPin, INPUT);
   pinMode(backLegSwitchPin, INPUT);
-  pinMode(weightLegSwitchPin, INPUT);
+  pinMode(weightSwitchPin, INPUT);
   attachInterrupt(digitalPinToInterrupt(frontLegSwitchPin), &frontLegSwitchInterrupt, RISING);
   attachInterrupt(digitalPinToInterrupt(backLegSwitchPin), &backLegSwitchInterrupt, RISING);
-  attachInterrupt(digitalPinToInterrupt(weightLegSwitchPin), &weightSwitchInterrupt, RISING);
+  attachInterrupt(digitalPinToInterrupt(weightSwitchPin), &weightSwitchInterrupt, RISING);
 
   delay(1000);
   resetSwitchStates();
@@ -82,6 +91,8 @@ void handleRemote(){
       resetSwitchStates();
     } else if (irRemoteKeyPressed == key_mode){
       printCurrentRobotState();
+    } else if (irRemoteKeyPressed == key_mute){
+      toggleRobotPauseState();
     }
         
     determineCurrentlySelectedMotor(irRemoteKeyPressed);
@@ -93,7 +104,44 @@ void handleRemote(){
   }
 }
 
+void toggleRobotPauseState(){
+  if(currentRobotState == ROBOT_STATE_PAUSED){
+    currentRobotState = lastRobotState;
+  }else{
+    currentRobotState = ROBOT_STATE_PAUSED;
+  }
+}
+void setRobotStateToPause(){
+  if(currentRobotState != ROBOT_STATE_PAUSED){
+    lastRobotState = currentRobotState;
+  }
+  currentRobotState = ROBOT_STATE_PAUSED;
+  Serial.print("Pausing robot last state was:\n  ");
+  printRobotState(lastRobotState);
+}
+
+void printRobotState(int state){
+  Serial.print("Robot state: "); 
+  switch(currentRobotState){
+    case ROBOT_STATE_PAUSED:
+      Serial.println("ROBOT_STATE_PAUSED. ");
+      break;
+    case ROBOT_STATE_RESET:
+      Serial.println("ROBOT_STATE_RESET. ");
+      break;
+    default:
+      Serial.print(state);
+      Serial.print(". \n");
+      break;
+  }
+}
 void updateRobotState(){
+  if(stateDelayOn){
+    delay(stateDelayDurationMs);
+  }
+  if(stateReportingOn){
+    printRobotState(currentRobotState); 
+  }
   int nextRobotState = ROBOT_STATE_RESET;
   switch(currentRobotState){
     case ROBOT_STATE_PAUSED:
@@ -217,38 +265,70 @@ void resetSwitchStates(){
   weightSwitchPressed = false;
 }
 
+boolean frontLegBettomSwitchOn(){
+  return digitalRead(frontLegBottomPin) == true;
+}
+
+boolean backLegFrontSwitchOn(){
+  return digitalRead(backLegFrontSwitchPin) == true;
+}
+
+boolean weightFrontSwitchOn(){
+  return digitalRead(weightFrontSwitchPin) == true;
+}
+
+boolean frontLegTopSwitchOn(){
+  int frontLegSwitchState = digitalRead(frontLegSwitchPin);
+  if(frontLegSwitchState == 1 && !frontLegBettomSwitchOn()) {
+    return true;
+  }
+  return false;
+}
+
+boolean backLegBackSwitchOn(){
+  int backLegSwitchState = digitalRead(backLegSwitchPin);
+  if(backLegSwitchState == 1 && !backLegFrontSwitchOn()) {
+    return true;
+  }
+  return false;
+}
+
+boolean weightBackSwitchOn(){
+  int weightSwitchState = digitalRead(weightSwitchPin);
+  if(weightSwitchState == 1 && !weightFrontSwitchOn()) {
+    return true;
+  }
+  return false;
+}
+
+
 void printSwitchStates(){
   int frontLegSwitchPinReading = digitalRead(frontLegSwitchPin);
   int backLegSwitchPinReading = digitalRead(backLegSwitchPin);
-  int weightLegSwitchPinnReading = digitalRead(weightLegSwitchPin);
+  int weightSwitchPinReading = digitalRead(weightSwitchPin);
   Serial.println("Switch states:");
-  Serial.print("  frontLegSwitchPin is: ");
-  if(frontLegSwitchPinReading==1){
-    Serial.print("open, ");
-  } else {
-    Serial.print("closed, ");
-  }
-  Serial.print("frontLegSwitchPressed: ");
-  Serial.print(frontLegSwitchPressed);
-  Serial.println(".");
-  Serial.print("  backLegSwitchPin is: ");
-  if(backLegSwitchPinReading==1){
-    Serial.print("open, ");
-  } else {
-    Serial.print("closed, ");
-  }
-  Serial.print("frontLegSwitchPressed: ");
-  Serial.print(backLegSwitchPressed);
-  Serial.println(".");
-  Serial.print("  weightLegSwitchPin is: ");
-  if(weightLegSwitchPinnReading==1){
-    Serial.print("open, ");
-  } else {
-    Serial.print("closed, ");
-  }
-  Serial.print("frontLegSwitchPressed: ");
-  Serial.print(weightSwitchPressed);
-  Serial.println(".");
+  
+  Serial.print("  frontLegBettomSwitchOn: ");
+  Serial.println(frontLegBettomSwitchOn());
+  Serial.print("  frontLegTopSwitchOn: ");
+  Serial.println(frontLegTopSwitchOn());
+  
+  Serial.print("  backLegFrontSwitchOn: ");  
+  Serial.println(backLegFrontSwitchOn());
+  Serial.print("  backLegBackSwitchOn: ");  
+  Serial.println(backLegBackSwitchOn());
+  
+  Serial.print("  weightFrontSwitchOn: ");
+  Serial.println(weightFrontSwitchOn());
+  Serial.print("  weightBackSwitchOn: ");
+  Serial.println(weightBackSwitchOn());
+  
+  Serial.print(" frontLegSwitchPressed: ");
+  Serial.println(frontLegSwitchPressed);
+  Serial.print(" backLegSwitchPressed: ");
+  Serial.println(backLegSwitchPressed);
+  Serial.print(" weightSwitchPressed: ");
+  Serial.println(weightSwitchPressed);
 }
 
 void frontLegSwitchInterrupt(){
