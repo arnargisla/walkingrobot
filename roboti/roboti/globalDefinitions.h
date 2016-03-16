@@ -21,6 +21,8 @@ const int frontLegBottomPin = 31;
 const int backLegFrontSwitchPin = 33;
 const int weightFrontSwitchPin = 35;
 
+const int stateMachineMotorControlEnabledLedPin = 39;
+
 const int state0LedPin = 41;
 const int state1LedPin = 43;
 const int state2LedPin = 45;
@@ -35,6 +37,8 @@ boolean stateReportingOn = false;
 boolean localStateReportingOn = false;
 long stateReportingTimer = 0;
 long stateReportingTimerLimit = 10000;
+
+boolean stateMachineAllowedControlOfMotors = false;
 
 int currentRobotState = ROBOT_STATE_0;
 int lastRobotState = ROBOT_STATE_0;

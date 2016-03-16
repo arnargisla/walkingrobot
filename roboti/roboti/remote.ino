@@ -5,6 +5,7 @@ void handleRemote(){
     printReceivedValue(irRemoteKeyPressed);
     
     if(irRemoteKeyPressed == key_poweron){
+      disableStateMachineMotorControl();
       stopAllMotors(); 
     } else if (irRemoteKeyPressed == key_arrows){
       printSwitchStates();
@@ -22,6 +23,8 @@ void handleRemote(){
     } else if (irRemoteKeyPressed == key_4){
       Serial.println("Setting state to RESET");
       currentRobotState = ROBOT_STATE_RESET;
+    } else if (irRemoteKeyPressed == key_5){
+      enableStateMachineMotorControl();
     }
         
     determineSelectedMotor(irRemoteKeyPressed);

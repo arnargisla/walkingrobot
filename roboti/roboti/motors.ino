@@ -1,17 +1,71 @@
-void runFrontLegMotorUp();
-void runFrontLegMotorDown();
-void runBackLegMotorForward();
-void runBacklegMotorBack();
-void runWeightMotorForward();
-void runWeightMotorBack();
-void runFrontLegMotor(int direction);
-void runBackLegMotor(int direction);
-void runWieghtMotor(int direction);
+void stopFrontLegMotor(){
+  stopMotor(frontLegMotor);
+}
+
+void stopBackLegMotor(){
+  stopMotor(backLegMotor);
+}
+
+void stopWeightMotor(){
+  stopMotor(weightMotor);
+}
+
+void runFrontLegMotorUp(){
+  runFrontLegMotor(UPWARD);
+}
+
+void runFrontLegMotorDown(){
+  runFrontLegMotor(DOWNWARD);
+}
+
+void runBackLegMotorForward(){
+  runBackLegMotor(FORWARD);
+}
+
+void runBackLegMotorBackward(){
+  runBackLegMotor(BACKWARD);
+}
+
+void runWeightMotorForward(){
+  runWeightMotor(FORWARD);
+}
+
+void runWeightMotorBackward(){
+  runWeightMotor(BACKWARD);
+}
+
+void runFrontLegMotor(int direction){
+  runMotor(frontLegMotor, direction);
+}
+
+void runBackLegMotor(int direction){
+  runMotor(backLegMotor, direction);
+}
+
+void runWeightMotor(int direction){
+  runMotor(weightMotor, direction);
+}
+
+void runMotor(DCMotor &motor, int direction){
+  motor.isActive = true;
+  if(direction == FORWARD){
+    motor.isGoingForward = true;
+  }else{
+    motor.isGoingForward = false;
+  }
+  motor.motorSpeed = 255;
+  updateMotor(motor);
+}
+
+void stopMotor(DCMotor &motor){
+  motor.isActive = false;
+  updateMotor(motor);
+}
 
 void resetAllMotors(){
-  frontLegMotor = {"Motor 1", &afmotor1, 255, 16, true, false};
-  backLegMotor = {"Motor 2", &afmotor2, 255, 16, true, false};
-  weightMotor = {"Motor 3", &afmotor3, 255, 16, true, false};
+  frontLegMotor = {"Front leg motor M1", &afmotor1, 255, 16, true, false};
+  backLegMotor = {"Back leg motor M2", &afmotor2, 255, 16, true, false};
+  weightMotor = {"Weight motor M3", &afmotor3, 255, 16, true, false};
   currentlySelectedMotor = &frontLegMotor;
   
   frontLegMotor.motor->run(RELEASE);

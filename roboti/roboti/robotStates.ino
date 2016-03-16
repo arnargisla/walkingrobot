@@ -1,3 +1,15 @@
+void enableStateMachineMotorControl(){
+  Serial.println("State machine motor control enabled!");
+  digitalWrite(stateMachineMotorControlEnabledLedPin, HIGH);
+  stateMachineAllowedControlOfMotors = true;
+}
+
+void disableStateMachineMotorControl(){
+  Serial.println("State machine motor control disabled!");
+  digitalWrite(stateMachineMotorControlEnabledLedPin, LOW);
+  stateMachineAllowedControlOfMotors = false;
+}
+
 
 void toggleRobotPauseState(){
   if(currentRobotState == ROBOT_STATE_PAUSED){
@@ -62,6 +74,9 @@ void updateRobotState(){
 }
 
 int stepRobotStatePaused(){
+  stopFrontLegMotor();
+  stopBackLegMotor();
+  stopWeightMotor();
   return ROBOT_STATE_PAUSED;
 }
 
@@ -95,7 +110,7 @@ int stepRobotState0(){
   //   front leg: down
   //   back leg: back
   //   weight forward
-  // next state -> 1
+  // next state -> 1 
   boolean stateComplete = true;
   stateComplete = moveFrontLegDown() && stateComplete;
   stateComplete = moveBackLegBack() && stateComplete;
@@ -246,22 +261,22 @@ void toggleRobotStateReporting(){
 int moveFrontLegDown(){  
   if(frontLegBottomSwitchOn()){
     if(localStateReportingOn) Serial.println("+ Front leg is down");
+    if(stateMachineAllowedControlOfMotors) stopFrontLegMotor();
     return true;
   }else{
     if(localStateReportingOn) Serial.println("- Front leg not yet down");
-    // turn front leg motor on in downwards direction 
-    // motor 1 run DOWNWARD
+    if(stateMachineAllowedControlOfMotors) runFrontLegMotorDown();
     return false;
   }
 }
 int moveFrontLegUp(){  
   if(frontLegTopSwitchOn()){
     if(localStateReportingOn) Serial.println("+ Front leg is up");
+    if(stateMachineAllowedControlOfMotors) stopFrontLegMotor();
     return true;
   }else{
     if(localStateReportingOn) Serial.println("- Front leg not yet up");
-    // turn front leg motor on in upwards direction 
-    // motor 1 run UPWARD
+    if(stateMachineAllowedControlOfMotors) runFrontLegMotorUp();
     return false;
   }
 }
@@ -270,11 +285,11 @@ int moveFrontLegUp(){
 int moveBackLegForward(){
    if(backLegFrontSwitchOn()){
     if(localStateReportingOn) Serial.println("+ Back leg is forward");
+    if(stateMachineAllowedControlOfMotors) stopBackLegMotor();
     return true;
   }else{
     if(localStateReportingOn) Serial.println("- Back leg not yet forward");
-    // turn back leg motor on in forwards direction 
-    // motor 2 run FORWARD
+    if(stateMachineAllowedControlOfMotors) runBackLegMotorForward();
     return false;
   }
 }
@@ -282,11 +297,11 @@ int moveBackLegForward(){
 int moveBackLegBack(){
    if(backLegBackSwitchOn()){
     if(localStateReportingOn) Serial.println("+ Back leg is back");
+    if(stateMachineAllowedControlOfMotors) stopBackLegMotor();
     return true;
   }else{
     if(localStateReportingOn) Serial.println("- Back leg not yet back");
-    // turn back leg motor on in backswards direction 
-    // motor 2 run BACKWARD
+    if(stateMachineAllowedControlOfMotors) runBackLegMotorBackward();
     return false;
   }
 }
@@ -294,11 +309,11 @@ int moveBackLegBack(){
 int moveWeightForward(){
   if(weightFrontSwitchOn()){
     if(localStateReportingOn) Serial.println("+ Weight is forward");
+    if(stateMachineAllowedControlOfMotors) stopWeightMotor();
     return true;
   }else{
     if(localStateReportingOn) Serial.println("- Weight not yet forward");
-    // turn weight motor on in FORWARD direction 
-    // motor 3 run FORWARD
+    if(stateMachineAllowedControlOfMotors) runWeightMotorForward();
     return false;
   }
 }
@@ -306,11 +321,11 @@ int moveWeightForward(){
 int moveWeightBack(){
   if(weightBackSwitchOn()){
     if(localStateReportingOn) Serial.println("+ Weight is back");
+    if(stateMachineAllowedControlOfMotors) stopWeightMotor();
     return true;
   }else{
     if(localStateReportingOn) Serial.println("- Weight not yet back");
-    // turn weight motor on in BACKWARD direction 
-    // motor 3 run BACKWARD
+    if(stateMachineAllowedControlOfMotors) runWeightMotorBackward();
     return false;
   }
 }

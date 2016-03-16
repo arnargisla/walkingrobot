@@ -10,6 +10,13 @@ void setup() {
   Serial.begin(9600);
   Serial.println("Hello!\n");
   
+  pinMode(stateMachineMotorControlEnabledLedPin, OUTPUT);
+  if(stateMachineAllowedControlOfMotors){
+    digitalWrite(stateMachineMotorControlEnabledLedPin, HIGH);
+  }else{
+    digitalWrite(stateMachineMotorControlEnabledLedPin, LOW);
+  }
+
   pinMode(state0LedPin, OUTPUT);
   pinMode(state1LedPin, OUTPUT);
   pinMode(state2LedPin, OUTPUT);
@@ -20,18 +27,7 @@ void setup() {
   
   irRemote.enableIRIn();
   
-  frontLegMotor = {"Motor 1", &afmotor1, 255, 16, true, false};
-  backLegMotor = {"Motor 2", &afmotor2, 255, 16, true, false};
-  weightMotor = {"Motor 3", &afmotor3, 255, 16, true, false};
-  currentlySelectedMotor = &frontLegMotor;
-  
-  // turn on motors
-  frontLegMotor.motor->run(RELEASE);
-  frontLegMotor.motor->setSpeed(frontLegMotor.motorSpeed);
-  backLegMotor.motor->run(RELEASE);
-  backLegMotor.motor->setSpeed(backLegMotor.motorSpeed);
-  weightMotor.motor->run(RELEASE);
-  weightMotor.motor->setSpeed(weightMotor.motorSpeed);
+  resetAllMotors();
   
   pinMode(frontLegSwitchPin, INPUT);
   pinMode(backLegSwitchPin, INPUT);
