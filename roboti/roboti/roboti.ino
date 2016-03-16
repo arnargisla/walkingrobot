@@ -4,7 +4,6 @@
 #include "RemoteButtonDefinitions.h"
 #include "DCMotor.h"
 #include "globalDefinitions.h"
-#include "stateTransitions.cpp"
 
 void setup() {
   Serial.begin(9600);
@@ -32,6 +31,8 @@ void setup() {
   pinMode(frontLegSwitchPin, INPUT);
   pinMode(backLegSwitchPin, INPUT);
   pinMode(weightSwitchPin, INPUT);
+  pinMode(weightMiddleSwitchPin, INPUT);
+  
   attachInterrupt(digitalPinToInterrupt(frontLegSwitchPin), &frontLegSwitchInterrupt, RISING);
   attachInterrupt(digitalPinToInterrupt(backLegSwitchPin), &backLegSwitchInterrupt, RISING);
   attachInterrupt(digitalPinToInterrupt(weightSwitchPin), &weightSwitchInterrupt, RISING);

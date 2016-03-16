@@ -20,6 +20,7 @@ const int weightSwitchPin = 20;
 const int frontLegBottomPin = 31;
 const int backLegFrontSwitchPin = 33;
 const int weightFrontSwitchPin = 35;
+const int weightMiddleSwitchPin = 27;
 
 const int stateMachineMotorControlEnabledLedPin = 39;
 

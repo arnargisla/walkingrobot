@@ -25,6 +25,10 @@ boolean frontLegBottomSwitchOn(){
   return digitalRead(frontLegBottomPin) == true;
 }
 
+boolean weightMiddleSwitchOn(){
+  return digitalRead(weightMiddleSwitchPin) == true;
+}
+
 boolean frontLegTopSwitchOn(){
   int frontLegSwitchState = digitalRead(frontLegSwitchPin);
   if(frontLegSwitchState == 1 && !frontLegBottomSwitchOn()) {
@@ -75,8 +79,12 @@ void printSwitchStates(){
   
   Serial.print("  weightFrontSwitchOn: ");
   Serial.println(weightFrontSwitchOn());
+  Serial.print("  weightMiddleSwitchOn: ");
+  Serial.println(weightMiddleSwitchOn());
   Serial.print("  weightBackSwitchOn: ");
   Serial.println(weightBackSwitchOn());
+
+  
   
   Serial.print(" frontLegSwitchPressed: ");
   Serial.println(frontLegSwitchPressed);
